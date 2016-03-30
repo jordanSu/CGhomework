@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include <GL/glew.h>	// should be include at first!
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cstdlib>
@@ -22,9 +22,9 @@ struct object_struct{
 	object_struct(): model(glm::mat4(1.0f)){}
 } ;
 
-std::vector<object_struct> objects;//vertex array object,vertex buffer object and texture(color) for objs
+std::vector<object_struct> objects;	//vertex array object,vertex buffer object and texture(color) for objs
 unsigned int program, program2;
-std::vector<int> indicesCount;//Number of indice of objs
+std::vector<int> indicesCount;	//Number of indice of objs
 
 static void error_callback(int error, const char* description)
 {
@@ -33,7 +33,7 @@ static void error_callback(int error, const char* description)
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
+		glfwSetWindowShouldClose(window, GL_TRUE);		//close the window when escape is pressed
 }
 
 static unsigned int setup_shader(const char *vertex_shader, const char *fragment_shader)
@@ -63,7 +63,9 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 		return 0;
 	}
 
+	//create a shader object and set shader type to run on a programmable fragment processor
 	GLuint fs=glCreateShader(GL_FRAGMENT_SHADER);
+
 	glShaderSource(fs, 1, (const GLchar**)&fragment_shader, nullptr);
 	glCompileShader(fs);
 
@@ -133,7 +135,7 @@ static unsigned char *load_bmp(const char *bmp, unsigned int *width, unsigned in
 		return nullptr;
 	char type[2];
 	unsigned int size, offset;
-	// check for magic signature	
+    // check for magic signature
 	fread(type, sizeof(type), 1, fp);
 	if(type[0]==0x42 || type[1]==0x4d){
 		fread(&size, sizeof(size), 1, fp);
@@ -241,6 +243,7 @@ static void releaseObjects()
 	glDeleteProgram(program);
 }
 
+//TODO: 關鍵function
 static void setUniformMat4(unsigned int program, const std::string &name, const glm::mat4 &mat)
 {
 	// This line can be ignore. But, if you have multiple shader program
@@ -276,19 +279,22 @@ int main(int argc, char *argv[])
 	// OpenGL 3.3, Mac OS X is reported to have some problem. However I don't have Mac to test
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	// For Mac OS X
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);	//to make OpenGL forward compatible
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	window = glfwCreateWindow(800, 600, "Simple Example", NULL, NULL);
+	window = glfwCreateWindow(800, 600, "Solar System", NULL, NULL);	//create a window object
 	if (!window)
 	{
 		glfwTerminate();
 		return EXIT_FAILURE;
 	}
 
+	// Make our window context the main context on current thread
 	glfwMakeContextCurrent(window);
 
 	// This line MUST put below glfwMakeContextCurrent
+	// Set GL_TRUE so that glew will use modern techniques to manage OpenGL functionality
 	glewExperimental = GL_TRUE;
 	glewInit();
 
@@ -306,7 +312,7 @@ int main(int argc, char *argv[])
 	int earth = add_obj(program, "earth.obj","earth.bmp");
 
 	glEnable(GL_DEPTH_TEST);
-	 glCullFace(GL_BACK);
+	glCullFace(GL_BACK);
 	// Enable blend mode for billboard
 	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -322,6 +328,7 @@ int main(int argc, char *argv[])
 	last = start = glfwGetTime();
 	int fps=0;
 	objects[sun].model = glm::scale(glm::mat4(1.0f), glm::vec3(0.85f));
+	float radio = 1.0f;
 	while (!glfwWindowShouldClose(window))
 	{//program will keep draw here until you close the window
 		float delta = glfwGetTime() - start;
@@ -331,6 +338,9 @@ int main(int argc, char *argv[])
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
+			radio = radio + 1.0;
+			setUniformMat4(program, "vp", glm::perspective(glm::radians(45.0f), 640.0f/480, radio, 100.f)*
+					glm::lookAt(glm::vec3(20.0f), glm::vec3(), glm::vec3(0, 1, 0))*glm::mat4(1.0f));
 			std::cout<<(double)fps/(glfwGetTime()-last)<<std::endl;
 			fps = 0;
 			last = glfwGetTime();
