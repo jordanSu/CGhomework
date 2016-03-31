@@ -1,4 +1,4 @@
-#include <GL/glew.h>	// should be include at first!
+#include <GL/glew.h>	// should be included at first!
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cstdlib>
@@ -33,7 +33,7 @@ static void error_callback(int error, const char* description)
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);		//close the window when escape is pressed
+		glfwSetWindowShouldClose(window, GL_TRUE);		//close the window when Esc is pressed
 }
 
 static unsigned int setup_shader(const char *vertex_shader, const char *fragment_shader)
@@ -290,10 +290,11 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+
 	// Make our window context the main context on current thread
 	glfwMakeContextCurrent(window);
 
-	// This line MUST put below glfwMakeContextCurrent
+	// This line MUST put below glfwMakeContextCurrent or it will crash
 	// Set GL_TRUE so that glew will use modern techniques to manage OpenGL functionality
 	glewExperimental = GL_TRUE;
 	glewInit();
@@ -328,25 +329,31 @@ int main(int argc, char *argv[])
 	last = start = glfwGetTime();
 	int fps=0;
 	objects[sun].model = glm::scale(glm::mat4(1.0f), glm::vec3(0.85f));
-	float radio = 1.0f;
+
+	
+
+	float angle = 5.0f;
 	while (!glfwWindowShouldClose(window))
-	{//program will keep draw here until you close the window
+	{ //program will keep drawing here until you close the window
 		float delta = glfwGetTime() - start;
 		render();
-		glfwSwapBuffers(window);
-		glfwPollEvents();
+		glfwSwapBuffers(window);	// To swap the color buffer in this game loop
+		glfwPollEvents();	// To check if any events are triggered
+		angle = angle + 0.01f;
+		glm::mat4 M;
+		M = glm::rotate(M, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+		setUniformMat4(program, "vp", glm::perspective(glm::radians(45.0f), 640.0f/480, 1.0f, 100.f)*
+				glm::lookAt(glm::vec3(20.0f), glm::vec3(), glm::vec3(0, 1, 0))*glm::mat4(1.0f) * M);
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
-			radio = radio + 1.0;
-			setUniformMat4(program, "vp", glm::perspective(glm::radians(45.0f), 640.0f/480, radio, 100.f)*
-					glm::lookAt(glm::vec3(20.0f), glm::vec3(), glm::vec3(0, 1, 0))*glm::mat4(1.0f));
 			std::cout<<(double)fps/(glfwGetTime()-last)<<std::endl;
 			fps = 0;
 			last = glfwGetTime();
 		}
 	}
 
+	// End of the program
 	releaseObjects();
 	glfwDestroyWindow(window);
 	glfwTerminate();
