@@ -39,10 +39,13 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 static unsigned int setup_shader(const char *vertex_shader, const char *fragment_shader)
 {
 	GLuint vs=glCreateShader(GL_VERTEX_SHADER);
+	// bind the source code to VS object
 	glShaderSource(vs, 1, (const GLchar**)&vertex_shader, nullptr);
 
+	// compile the source code of VS object
 	glCompileShader(vs);
 
+	// To check if compile is success or not
 	int status, maxLength;
 	char *infoLog=nullptr;
 	glGetShaderiv(vs, GL_COMPILE_STATUS, &status);
@@ -87,15 +90,16 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 		return 0;
 	}
 
+	// Create a program object
 	unsigned int program=glCreateProgram();
 	// Attach our shaders to our program
 	glAttachShader(program, vs);
 	glAttachShader(program, fs);
-
+	// Link the shader in the program
 	glLinkProgram(program);
 
+	// To check if linking is success or not
 	glGetProgramiv(program, GL_LINK_STATUS, &status);
-
 	if(status==GL_FALSE)
 	{
 		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
@@ -114,6 +118,8 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 		delete [] infoLog;
 		return 0;
 	}
+	glDeleteShader(vs);
+	glDeleteShader(fs);
 	return program;
 }
 
@@ -172,7 +178,7 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 		std::cerr<<err<<std::endl;
 		exit(1);
 	}
-
+	// Generate Vertex Array Objects
 	glGenVertexArrays(1, &new_node.vao);
 	glGenBuffers(4, new_node.vbo);
 	glGenTextures(1, &new_node.texture);
@@ -189,7 +195,8 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 	{
 
 		// Upload texCoord array
-		glBindBuffer(GL_ARRAY_BUFFER, new_node.vbo[1]);
+		glBindBuffer(GL_ARRAY_BUFFER, new_node.vbo[1]);		// bind buffer type
+		// copy data into buffers
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*shapes[0].mesh.texcoords.size(),
 				shapes[0].mesh.texcoords.data(), GL_STATIC_DRAW);
 		glEnableVertexAttribArray(1);
@@ -290,7 +297,6 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-
 	// Make our window context the main context on current thread
 	glfwMakeContextCurrent(window);
 
@@ -305,12 +311,12 @@ int main(int argc, char *argv[])
 	// Setup input callback
 	glfwSetKeyCallback(window, key_callback);
 
-	// load shader program
+	// setup and load shader program
 	program = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
 	program2 = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
 
 	int sun = add_obj(program, "sun.obj","sun.bmp");
-	int earth = add_obj(program, "earth.obj","earth.bmp");
+	int earth = add_obj(program2, "earth.obj","earth.bmp");
 
 	glEnable(GL_DEPTH_TEST);
 	glCullFace(GL_BACK);
@@ -318,32 +324,36 @@ int main(int argc, char *argv[])
 	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	setUniformMat4(program, "vp", glm::perspective(glm::radians(45.0f), 640.0f/480, 1.0f, 100.f)*
-			glm::lookAt(glm::vec3(20.0f), glm::vec3(), glm::vec3(0, 1, 0))*glm::mat4(1.0f));
-	setUniformMat4(program2, "vp", glm::mat4(1.0));
-	glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(15.0f,0.0f,0.0));
-	glm::mat4 rot;
-	glm::mat4 rev;
+	setUniformMat4(program, "vp", glm::perspective(glm::radians(40.0f), 640.0f/480, 1.0f, 100.f)*
+			glm::lookAt(glm::vec3(30.0f, 20.0f, 30.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
+	setUniformMat4(program, "model", glm::mat4(1.0f));
+	setUniformMat4(program2, "vp", glm::perspective(glm::radians(40.0f), 640.0f/480, 1.0f, 100.f)*
+			glm::lookAt(glm::vec3(30.0f, 20.0f, 30.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
+	//glm::mat4 rot;
+	//glm::mat4 rev;
 
 	float last, start;
 	last = start = glfwGetTime();
 	int fps=0;
 	objects[sun].model = glm::scale(glm::mat4(1.0f), glm::vec3(0.85f));
-
-	
-
+	/*
+	glm::mat4 translateM;
+	translateM = glm::translate(translateM, glm::vec3(1.0f, 0.0f, 0.0f));
+	setUniformMat4(program2, "model", translateM);
+	*/
 	float angle = 5.0f;
+	float rev = 5.0f;
 	while (!glfwWindowShouldClose(window))
 	{ //program will keep drawing here until you close the window
 		float delta = glfwGetTime() - start;
 		render();
 		glfwSwapBuffers(window);	// To swap the color buffer in this game loop
 		glfwPollEvents();	// To check if any events are triggered
-		angle = angle + 0.01f;
-		glm::mat4 M;
-		M = glm::rotate(M, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-		setUniformMat4(program, "vp", glm::perspective(glm::radians(45.0f), 640.0f/480, 1.0f, 100.f)*
-				glm::lookAt(glm::vec3(20.0f), glm::vec3(), glm::vec3(0, 1, 0))*glm::mat4(1.0f) * M);
+		angle = angle + 0.1f;
+		rev = rev + 0.01f;
+		glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(12.0*sin(rev),5*sin(rev),18.0*cos(rev)));
+		glm::mat4 rotateM = glm::rotate(glm::mat4(), angle, glm::vec3(0.1f, 1.0f, 0.0f));;
+		setUniformMat4(program2, "model", tl * rotateM);
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
