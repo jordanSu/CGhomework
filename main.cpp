@@ -20,11 +20,11 @@ struct object_struct{
 	unsigned int texture;
 	glm::mat4 model;
 	object_struct(): model(glm::mat4(1.0f)){}
-} ;
+};
 
-std::vector<object_struct> objects;	//vertex array object,vertex buffer object and texture(color) for objs
-unsigned int program, program2;
-std::vector<int> indicesCount;	//Number of indice of objs
+std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
+unsigned int program, program2;		// Two shader program
+std::vector<int> indicesCount;		//Number of indice of objs
 
 static void error_callback(int error, const char* description)
 {
@@ -45,7 +45,7 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 	// compile the source code of VS object
 	glCompileShader(vs);
 
-	// To check if compile is success or not
+	// To check if compiling is success or not
 	int status, maxLength;
 	char *infoLog=nullptr;
 	glGetShaderiv(vs, GL_COMPILE_STATUS, &status);
@@ -68,8 +68,10 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 
 	//create a shader object and set shader type to run on a programmable fragment processor
 	GLuint fs=glCreateShader(GL_FRAGMENT_SHADER);
-
+	// bind the source code to FS object
 	glShaderSource(fs, 1, (const GLchar**)&fragment_shader, nullptr);
+
+	// compile the source code of FS object
 	glCompileShader(fs);
 
 	glGetShaderiv(fs, GL_COMPILE_STATUS, &status);
@@ -92,9 +94,11 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 
 	// Create a program object
 	unsigned int program=glCreateProgram();
+
 	// Attach our shaders to our program
 	glAttachShader(program, vs);
 	glAttachShader(program, fs);
+
 	// Link the shader in the program
 	glLinkProgram(program);
 
@@ -104,11 +108,9 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 	{
 		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
 
-
 		/* The maxLength includes the NULL character */
 		infoLog = new char[maxLength];
 		glGetProgramInfoLog(program, maxLength, NULL, infoLog);
-
 		glGetProgramInfoLog(program, maxLength, &maxLength, infoLog);
 
 		fprintf(stderr, "Link Error: %s\n", infoLog);
@@ -118,6 +120,7 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 		delete [] infoLog;
 		return 0;
 	}
+	// No more need to be used, delete it
 	glDeleteShader(vs);
 	glDeleteShader(fs);
 	return program;
@@ -155,8 +158,10 @@ static unsigned char *load_bmp(const char *bmp, unsigned int *width, unsigned in
 		// ignore planes field
 		fseek(fp, 2, SEEK_CUR);
 		fread(bits, sizeof(*bits), 1, fp);
+
 		unsigned char *pos = result = new unsigned char[size-offset];
 		fseek(fp, offset, SEEK_SET);
+		// Read the real content
 		while(size-ftell(fp)>0)
 			pos+=fread(pos, 1, size-ftell(fp), fp);
 	}
@@ -171,18 +176,20 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
 
+	// Load .obj file
 	std::string err = tinyobj::LoadObj(shapes, materials, filename);
-
 	if (!err.empty()||shapes.size()==0)
 	{
 		std::cerr<<err<<std::endl;
 		exit(1);
 	}
+
 	// Generate Vertex Array Objects
 	glGenVertexArrays(1, &new_node.vao);
 	glGenBuffers(4, new_node.vbo);
 	glGenTextures(1, &new_node.texture);
 
+	// Start VAO recording
 	glBindVertexArray(new_node.vao);
 
 	// Upload postion array
@@ -193,7 +200,6 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	if(shapes[0].mesh.texcoords.size()>0)
 	{
-
 		// Upload texCoord array
 		glBindBuffer(GL_ARRAY_BUFFER, new_node.vbo[1]);		// bind buffer type
 		// copy data into buffers
@@ -248,6 +254,7 @@ static void releaseObjects()
 		glDeleteBuffers(4, objects[i].vbo);
 	}
 	glDeleteProgram(program);
+	glDeleteProgram(program2);
 }
 
 //TODO: 關鍵function
@@ -324,23 +331,17 @@ int main(int argc, char *argv[])
 	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	setUniformMat4(program, "vp", glm::perspective(glm::radians(40.0f), 640.0f/480, 1.0f, 100.f)*
+	setUniformMat4(program, "vp", glm::perspective(glm::radians(40.0f), 800.0f/600, 1.0f, 100.f)*
 			glm::lookAt(glm::vec3(30.0f, 20.0f, 30.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
 	setUniformMat4(program, "model", glm::mat4(1.0f));
-	setUniformMat4(program2, "vp", glm::perspective(glm::radians(40.0f), 640.0f/480, 1.0f, 100.f)*
+	setUniformMat4(program2, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
 			glm::lookAt(glm::vec3(30.0f, 20.0f, 30.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
-	//glm::mat4 rot;
-	//glm::mat4 rev;
 
 	float last, start;
 	last = start = glfwGetTime();
 	int fps=0;
 	objects[sun].model = glm::scale(glm::mat4(1.0f), glm::vec3(0.85f));
-	/*
-	glm::mat4 translateM;
-	translateM = glm::translate(translateM, glm::vec3(1.0f, 0.0f, 0.0f));
-	setUniformMat4(program2, "model", translateM);
-	*/
+
 	float angle = 5.0f;
 	float rev = 5.0f;
 	while (!glfwWindowShouldClose(window))
@@ -348,12 +349,14 @@ int main(int argc, char *argv[])
 		float delta = glfwGetTime() - start;
 		render();
 		glfwSwapBuffers(window);	// To swap the color buffer in this game loop
-		glfwPollEvents();	// To check if any events are triggered
+		glfwPollEvents();			// To check if any events are triggered
+
 		angle = angle + 0.1f;
 		rev = rev + 0.01f;
 		glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(12.0*sin(rev),5*sin(rev),18.0*cos(rev)));
 		glm::mat4 rotateM = glm::rotate(glm::mat4(), angle, glm::vec3(0.1f, 1.0f, 0.0f));;
 		setUniformMat4(program2, "model", tl * rotateM);
+
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
