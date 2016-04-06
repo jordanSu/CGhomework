@@ -187,6 +187,8 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 	// Generate Vertex Array Objects
 	glGenVertexArrays(1, &new_node.vao);
 	glGenBuffers(4, new_node.vbo);
+
+	// Generate texture objects
 	glGenTextures(1, &new_node.texture);
 
 	// Start VAO recording
@@ -331,11 +333,14 @@ int main(int argc, char *argv[])
 	//glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	setUniformMat4(program, "vp", glm::perspective(glm::radians(40.0f), 800.0f/600, 1.0f, 100.f)*
-			glm::lookAt(glm::vec3(30.0f, 20.0f, 30.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
+	// Setup the MVP matrix for Sun
+	setUniformMat4(program, "vp", glm::perspective(glm::radians(32.0f), 800.0f/600, 1.0f, 100.f)*
+			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
 	setUniformMat4(program, "model", glm::mat4(1.0f));
-	setUniformMat4(program2, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
-			glm::lookAt(glm::vec3(30.0f, 20.0f, 30.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
+
+	// Setup VP matrix for Earth
+	setUniformMat4(program2, "vp", glm::perspective(glm::radians(32.0f), 800.0f/600, 1.0f, 100.f)*
+			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
 
 	float last, start;
 	last = start = glfwGetTime();
@@ -344,6 +349,7 @@ int main(int argc, char *argv[])
 
 	float angle = 5.0f;
 	float rev = 5.0f;
+	float sunAngle = 5.0f;
 	while (!glfwWindowShouldClose(window))
 	{ //program will keep drawing here until you close the window
 		float delta = glfwGetTime() - start;
@@ -352,10 +358,13 @@ int main(int argc, char *argv[])
 		glfwPollEvents();			// To check if any events are triggered
 
 		angle = angle + 0.1f;
+		sunAngle = sunAngle + 0.003f;
 		rev = rev + 0.01f;
-		glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(12.0*sin(rev),5*sin(rev),18.0*cos(rev)));
-		glm::mat4 rotateM = glm::rotate(glm::mat4(), angle, glm::vec3(0.1f, 1.0f, 0.0f));;
+		glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(10.0*sin(rev),3*sin(rev),20.0*cos(rev)));
+		glm::mat4 rotateM = glm::rotate(glm::mat4(), angle, glm::vec3(0.1f, 1.0f, 0.0f));
+		glm::mat4 sunRotate = glm::rotate(glm::mat4(), sunAngle, glm::vec3(0.0f, 1.0f, 0.0f));
 		setUniformMat4(program2, "model", tl * rotateM);
+		setUniformMat4(program, "model", sunRotate);
 
 		fps++;
 		if(glfwGetTime() - last > 1.0)
