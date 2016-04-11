@@ -1,4 +1,4 @@
-#include <GL/glew.h>	// should be included at first!
+#include <GL/glew.h>	// should be included at the beginning!
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cstdlib>
@@ -11,7 +11,6 @@
 #include "tiny_obj_loader.h"
 
 #define GLM_FORCE_RADIANS
-
 
 struct object_struct{
 	unsigned int program;
@@ -36,27 +35,29 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		glfwSetWindowShouldClose(window, GL_TRUE);		//close the window when Esc is pressed
 }
 
+// Setup shader program here
 static unsigned int setup_shader(const char *vertex_shader, const char *fragment_shader)
 {
 	GLuint vs=glCreateShader(GL_VERTEX_SHADER);
+
 	// bind the source code to VS object
 	glShaderSource(vs, 1, (const GLchar**)&vertex_shader, nullptr);
 
 	// compile the source code of VS object
 	glCompileShader(vs);
 
-	// To check if compiling is success or not
+	/***** To check if compiling is success or not *****/
 	int status, maxLength;
 	char *infoLog=nullptr;
-	glGetShaderiv(vs, GL_COMPILE_STATUS, &status);
+	glGetShaderiv(vs, GL_COMPILE_STATUS, &status);	// get status
 	if(status==GL_FALSE)
 	{
-		glGetShaderiv(vs, GL_INFO_LOG_LENGTH, &maxLength);
+		glGetShaderiv(vs, GL_INFO_LOG_LENGTH, &maxLength);	//get info length
 
 		/* The maxLength includes the NULL character */
 		infoLog = new char[maxLength];
 
-		glGetShaderInfoLog(vs, maxLength, &maxLength, infoLog);
+		glGetShaderInfoLog(vs, maxLength, &maxLength, infoLog);	//get info
 
 		fprintf(stderr, "Vertex Shader Error: %s\n", infoLog);
 
@@ -65,24 +66,26 @@ static unsigned int setup_shader(const char *vertex_shader, const char *fragment
 		delete [] infoLog;
 		return 0;
 	}
+	/***************************************************/
 
 	//create a shader object and set shader type to run on a programmable fragment processor
 	GLuint fs=glCreateShader(GL_FRAGMENT_SHADER);
+
 	// bind the source code to FS object
 	glShaderSource(fs, 1, (const GLchar**)&fragment_shader, nullptr);
 
 	// compile the source code of FS object
 	glCompileShader(fs);
 
-	glGetShaderiv(fs, GL_COMPILE_STATUS, &status);
+	glGetShaderiv(fs, GL_COMPILE_STATUS, &status);	// get compile status
 	if(status==GL_FALSE)
 	{
-		glGetShaderiv(fs, GL_INFO_LOG_LENGTH, &maxLength);
+		glGetShaderiv(fs, GL_INFO_LOG_LENGTH, &maxLength);	//get info length
 
 		/* The maxLength includes the NULL character */
 		infoLog = new char[maxLength];
 
-		glGetShaderInfoLog(fs, maxLength, &maxLength, infoLog);
+		glGetShaderInfoLog(fs, maxLength, &maxLength, infoLog);	//get info
 
 		fprintf(stderr, "Fragment Shader Error: %s\n", infoLog);
 
@@ -148,13 +151,16 @@ static unsigned char *load_bmp(const char *bmp, unsigned int *width, unsigned in
 	fread(type, sizeof(type), 1, fp);
 	if(type[0]==0x42 || type[1]==0x4d){
 		fread(&size, sizeof(size), 1, fp);
+
 		// ignore 2 two-byte reversed fields
 		fseek(fp, 4, SEEK_CUR);
 		fread(&offset, sizeof(offset), 1, fp);
+
 		// ignore size of bmpinfoheader field
 		fseek(fp, 4, SEEK_CUR);
 		fread(width, sizeof(*width), 1, fp);
 		fread(height, sizeof(*height), 1, fp);
+
 		// ignore planes field
 		fseek(fp, 2, SEEK_CUR);
 		fread(bits, sizeof(*bits), 1, fp);
@@ -169,6 +175,7 @@ static unsigned char *load_bmp(const char *bmp, unsigned int *width, unsigned in
 	return result;
 }
 
+// Add vertex data and bmp into VBO and setup VAO, then put them into objects array
 static int add_obj(unsigned int program, const char *filename,const char *texbmp)
 {
 	object_struct new_node;
@@ -198,8 +205,11 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 	glBindBuffer(GL_ARRAY_BUFFER, new_node.vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*shapes[0].mesh.positions.size(),
 			shapes[0].mesh.positions.data(), GL_STATIC_DRAW);
+
+	// Put into vs's input (location=0)
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
 	if(shapes[0].mesh.texcoords.size()>0)
 	{
 		// Upload texCoord array
@@ -207,6 +217,8 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 		// copy data into buffers
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*shapes[0].mesh.texcoords.size(),
 				shapes[0].mesh.texcoords.data(), GL_STATIC_DRAW);
+
+		// Put into vs's input (location=1)
 		glEnableVertexAttribArray(1);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
@@ -229,6 +241,7 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat)*shapes[0].mesh.normals.size(),
 				shapes[0].mesh.normals.data(), GL_STATIC_DRAW);
 
+		// Put into vs's input (location=2)
 		glEnableVertexAttribArray(2);
 		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	}
@@ -240,6 +253,7 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 
 	indicesCount.push_back(shapes[0].mesh.indices.size());
 
+	// End of VAO recording
 	glBindVertexArray(0);
 
 	new_node.program = program;
@@ -248,6 +262,7 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 	return objects.size()-1;
 }
 
+// Free all objects and memory space
 static void releaseObjects()
 {
 	for(int i=0;i<objects.size();i++){
@@ -259,7 +274,7 @@ static void releaseObjects()
 	glDeleteProgram(program2);
 }
 
-//TODO: 關鍵function
+// The key function of HW2, you can change Uniform variable here
 static void setUniformMat4(unsigned int program, const std::string &name, const glm::mat4 &mat)
 {
 	// This line can be ignore. But, if you have multiple shader program
@@ -270,12 +285,15 @@ static void setUniformMat4(unsigned int program, const std::string &name, const 
 
 	// mat4 of glm is column major, same as opengl
 	// we don't need to transpose it. so..GL_FALSE
+	// Put `mat` into uniform variable in vs.txt
 	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
 }
 
+// Draw Object on window
 static void render()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// draw every object
 	for(int i=0;i<objects.size();i++){
 		glUseProgram(objects[i].program);
 		glBindVertexArray(objects[i].vao);
@@ -324,13 +342,14 @@ int main(int argc, char *argv[])
 	program = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
 	program2 = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
 
+	// Build obj and return the index in objects array
 	int sun = add_obj(program, "sun.obj","sun.bmp");
 	int earth = add_obj(program2, "earth.obj","earth.bmp");
 
 	glEnable(GL_DEPTH_TEST);
 	glCullFace(GL_BACK);
 	// Enable blend mode for billboard
-	//glEnable(GL_BLEND);
+	glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// Setup the MVP matrix for Sun
@@ -345,7 +364,7 @@ int main(int argc, char *argv[])
 	float last, start;
 	last = start = glfwGetTime();
 	int fps=0;
-	objects[sun].model = glm::scale(glm::mat4(1.0f), glm::vec3(0.85f));
+	//objects[sun].model = glm::scale(glm::mat4(1.0f), glm::vec3(0.85f));
 
 	float angle = 5.0f;
 	float rev = 5.0f;
@@ -357,6 +376,7 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(window);	// To swap the color buffer in this game loop
 		glfwPollEvents();			// To check if any events are triggered
 
+		// Do the next step for sun rotation, earth rotation and revolution
 		angle = angle + 0.1f;
 		sunAngle = sunAngle + 0.003f;
 		rev = rev + 0.01f;
