@@ -14,7 +14,7 @@ uniform mat4 vp;
 // Outputs
 // 'out' means vertex shader output for fragment shader
 // fNormal will be interpolated before passing to fragment shader
-out vec2 fTexcoord;
+flat out vec2 fTexcoord;
 
 void main()
 {
