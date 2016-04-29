@@ -23,6 +23,7 @@ struct object_struct{
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
 unsigned int program, program2;		// Two shader program
+unsigned int lightProgram;			// Shader program for light source
 std::vector<int> indicesCount;		//Number of indice of objs
 
 static void error_callback(int error, const char* description)
