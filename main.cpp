@@ -23,9 +23,10 @@ struct object_struct{
 };
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
-unsigned int program, program2;		// Two shader program
-//unsigned int lightProgram;			// Shader program for light source
-std::vector<int> indicesCount;		//Number of indice of objs
+unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram;		// Four shader program
+int sun, earth;
+int ProgramIndex = 3;
+std::vector<int> indicesCount;		// Number of indice of objs
 
 static void error_callback(int error, const char* description)
 {
@@ -272,8 +273,10 @@ static void releaseObjects()
 		glDeleteTextures(1, &objects[i].texture);
 		glDeleteBuffers(4, objects[i].vbo);
 	}
-	glDeleteProgram(program);
-	glDeleteProgram(program2);
+	glDeleteProgram(FlatProgram);
+	glDeleteProgram(GouraudProgram);
+	glDeleteProgram(PhongProgram);
+	glDeleteProgram(BlinnProgram);
 }
 
 // The key function of HW2, you can change Uniform variable here
@@ -319,6 +322,32 @@ static void render()
 	glBindVertexArray(0);
 }
 
+static void changeProgram()
+{
+	switch(ProgramIndex) {
+		case 1:	// change to Gouraud
+			objects[sun].program = GouraudProgram;
+			objects[earth].program = GouraudProgram;
+			ProgramIndex = 2;
+			break;
+		case 2:	// change to Phong
+			objects[sun].program = PhongProgram;
+			objects[earth].program = PhongProgram;
+			ProgramIndex = 3;
+			break;
+		case 3:	// change to Blinn
+			objects[sun].program = BlinnProgram;
+			objects[earth].program = BlinnProgram;
+			ProgramIndex = 4;
+			break;
+		case 4:	// change to Flat
+			objects[sun].program = FlatProgram;
+			objects[earth].program = FlatProgram;
+			ProgramIndex = 1;
+			break;
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	GLFWwindow* window;
@@ -356,12 +385,12 @@ int main(int argc, char *argv[])
 	// setup and load shader program
 	FlatProgram = setup_shader(readfile("vsFlat.txt").c_str(), readfile("fsFlat.txt").c_str());
 	GouraudProgram = setup_shader(readfile("vsGouraud.txt").c_str(), readfile("fsGouraud.txt").c_str());
-	PhongProgram = setup_shader(readfile("vsPhong.txt").c_str(), readfile("fsPhong.txt").c_str());
+	PhongProgram = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
 	BlinnProgram = setup_shader(readfile("vsBlinn.txt").c_str(), readfile("fsBlinn.txt").c_str());
 
 	// Build obj and return the index in objects array
-	int sun = add_obj(program, "sun.obj","sun.bmp");
-	int earth = add_obj(program, "earth.obj","earth.bmp");
+	sun = add_obj(PhongProgram, "sun.obj","sun.bmp");
+	earth = add_obj(PhongProgram, "earth.obj","earth.bmp");
 
 	glEnable(GL_DEPTH_TEST);
 	glCullFace(GL_BACK);
@@ -390,7 +419,7 @@ int main(int argc, char *argv[])
 	setUniformVec3(objects[sun].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
 
 	// setup ambient strength
-	objects[earth].ambient = glm::vec3(0.2f);
+	objects[earth].ambient = glm::vec3(0.5f);
 	objects[sun].ambient = glm::vec3(1.0f);
 
 	float last, start;
@@ -401,6 +430,7 @@ int main(int argc, char *argv[])
 	float angle = 5.0f;
 	float rev = 5.0f;
 	float sunAngle = 5.0f;
+	int changeCount = 3;
 	while (!glfwWindowShouldClose(window))
 	{ //program will keep drawing here until you close the window
 		float delta = glfwGetTime() - start;
@@ -421,6 +451,28 @@ int main(int argc, char *argv[])
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
+			if (changeCount == 0) {
+				changeProgram();
+				// Setup the MVP matrix for Sun
+				setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
+						glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
+
+				// Setup VP matrix for Earth
+				setUniformMat4(objects[earth].program, "vp", glm::perspective(glm::radians(24.0f), 800.0f/600, 1.0f, 100.f)*
+						glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
+
+				// setup lightPos
+				setUniformVec3(objects[earth].program, "lightPos", glm::vec3(0.0f));
+				setUniformVec3(objects[sun].program, "lightPos", glm::vec3(0.0f));
+
+				// setup viewPos
+				setUniformVec3(objects[earth].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
+				setUniformVec3(objects[sun].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
+				changeCount = 3;
+			}
+			else
+				changeCount--;
+
 			std::cout<<(double)fps/(glfwGetTime()-last)<<std::endl;
 			fps = 0;
 			last = glfwGetTime();
