@@ -35,8 +35,8 @@ void main()
 	/***** Specular *****/
 	float strength = 0.8f;
 	vec3 viewDir = normalize(viewPos - fragmentPos);
-	vec3 reflectDir = reflect(-lightDir, norm);
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
+	vec3 H = normalize(lightDir + viewDir);
+	float spec = pow(max(dot(H, norm), 0.0), 16);
 	vec3 specular = strength * spec * vec3(1.0);
 	/********************/
 

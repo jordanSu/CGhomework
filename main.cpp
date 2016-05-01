@@ -18,6 +18,7 @@ struct object_struct{
 	unsigned int vbo[4];
 	unsigned int texture;
 	glm::mat4 model;
+	glm::vec3 ambient;
 	object_struct(): model(glm::mat4(1.0f)){}
 };
 
@@ -310,8 +311,9 @@ static void render()
 		glUseProgram(objects[i].program);
 		glBindVertexArray(objects[i].vao);
 		glBindTexture(GL_TEXTURE_2D, objects[i].texture);
-		// I will change the model matrix here
+		// I will change the model matrix and ambient strength here
 		setUniformMat4(objects[i].program, "model", objects[i].model);
+		setUniformVec3(objects[i].program, "ambientLight", objects[i].ambient);
 		glDrawElements(GL_TRIANGLES, indicesCount[i], GL_UNSIGNED_INT, nullptr);
 	}
 	glBindVertexArray(0);
@@ -352,13 +354,14 @@ int main(int argc, char *argv[])
 	glfwSetKeyCallback(window, key_callback);
 
 	// setup and load shader program
-	program = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
-	program2 = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
-	//lightProgram = setup_shader(readfile("vsLight.txt").c_str(), readfile("fsLight.txt").c_str());
+	FlatProgram = setup_shader(readfile("vsFlat.txt").c_str(), readfile("fsFlat.txt").c_str());
+	GouraudProgram = setup_shader(readfile("vsGouraud.txt").c_str(), readfile("fsGouraud.txt").c_str());
+	PhongProgram = setup_shader(readfile("vsPhong.txt").c_str(), readfile("fsPhong.txt").c_str());
+	BlinnProgram = setup_shader(readfile("vsBlinn.txt").c_str(), readfile("fsBlinn.txt").c_str());
 
 	// Build obj and return the index in objects array
 	int sun = add_obj(program, "sun.obj","sun.bmp");
-	int earth = add_obj(program2, "earth.obj","earth.bmp");
+	int earth = add_obj(program, "earth.obj","earth.bmp");
 
 	glEnable(GL_DEPTH_TEST);
 	glCullFace(GL_BACK);
@@ -366,8 +369,10 @@ int main(int argc, char *argv[])
 	glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	glProvokingVertex(GL_FIRST_VERTEX_CONVENTION);
+
 	// Setup the MVP matrix for Sun
-	setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(32.0f), 800.0f/600, 1.0f, 100.f)*
+	setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
 			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
 	objects[sun].model = glm::mat4(1.0f);
 
@@ -385,8 +390,8 @@ int main(int argc, char *argv[])
 	setUniformVec3(objects[sun].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
 
 	// setup ambient strength
-	setUniformVec3(objects[earth].program, "ambientLight", glm::vec3(0.5f));
-	setUniformVec3(objects[sun].program, "ambientLight", glm::vec3(1.0f));
+	objects[earth].ambient = glm::vec3(0.2f);
+	objects[sun].ambient = glm::vec3(1.0f);
 
 	float last, start;
 	last = start = glfwGetTime();

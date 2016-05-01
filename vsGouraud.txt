@@ -1,0 +1,52 @@
+#version 330	//you should declare version number first
+
+// Inputs
+layout(location=0) in vec3 position;
+layout(location=1) in vec2 texcoord;
+layout(location=2) in vec3 normal;	// Here is the normal vector
+
+// uniform variable can be viewed as a constant
+// you can set the uniform variable by glUniformXXXXXXXX
+// HINT: I do not use model matrix here, but you might need it
+uniform mat4 model;
+uniform mat4 vp;
+uniform vec3 lightPos;
+uniform vec3 viewPos;
+uniform vec3 ambientLight;
+
+// Outputs
+// 'out' means vertex shader output for fragment shader
+// fNormal will be interpolated before passing to fragment shader
+out vec3 resultLight;
+out vec2 fTexcoord;
+
+void main()
+{
+	gl_Position=vp*model*vec4(position, 1.0);
+	fTexcoord = texcoord;
+
+	vec3 vertexPos = vec3(model*vec4(position, 1.0));
+
+	/***** Ambient *****/
+	vec3 ambient = ambientLight;
+	/*******************/
+
+	/***** Diffuse *****/
+	// To normalize relevant vectors
+	vec3 norm = normalize(mat3(transpose(inverse(model))) * normal);
+	vec3 lightDir = normalize(lightPos - vertexPos);
+
+	// To calculate diffuse
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 diffuse = diff * vec3(1.0);
+	/*******************/
+
+	/***** Specular *****/
+	float strength = 0.8f;
+	vec3 viewDir = normalize(viewPos - vertexPos);
+	vec3 reflectDir = reflect(-lightDir, norm);
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
+	vec3 specular = strength * spec * vec3(1.0);
+	/********************/
+	resultLight = ambient + diffuse + specular;
+}
