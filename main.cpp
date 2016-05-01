@@ -290,6 +290,17 @@ static void setUniformMat4(unsigned int program, const std::string &name, const 
 	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
 }
 
+static void setUniformVec3(unsigned int program, const std::string &name, const glm::vec3 &vector)
+{
+	// This line can be ignore. But, if you have multiple shader program
+	// You must check if currect binding is the one you want
+	glUseProgram(program);
+	GLint loc=glGetUniformLocation(program, name.c_str());
+	if(loc==-1) return;
+
+	glUniform3f(loc, vector.x, vector.y, vector.z);
+}
+
 // Draw Object on window
 static void render()
 {
@@ -299,7 +310,8 @@ static void render()
 		glUseProgram(objects[i].program);
 		glBindVertexArray(objects[i].vao);
 		glBindTexture(GL_TEXTURE_2D, objects[i].texture);
-		//you should send some data to shader here
+		// I will change the model matrix here
+		setUniformMat4(objects[i].program, "model", objects[i].model);
 		glDrawElements(GL_TRIANGLES, indicesCount[i], GL_UNSIGNED_INT, nullptr);
 	}
 	glBindVertexArray(0);
@@ -347,7 +359,6 @@ int main(int argc, char *argv[])
 	// Build obj and return the index in objects array
 	int sun = add_obj(program, "sun.obj","sun.bmp");
 	int earth = add_obj(program2, "earth.obj","earth.bmp");
-	//int light = add_obj(lightProgram, "rectangle.obj","bloom.bmp");
 
 	glEnable(GL_DEPTH_TEST);
 	glCullFace(GL_BACK);
@@ -355,22 +366,27 @@ int main(int argc, char *argv[])
 	glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	// Setup the MVP matrix for light
-	/*
-	setUniformMat4(objects[light].program, "vp", glm::perspective(glm::radians(32.0f), 800.0f/600, 1.0f, 100.f)*
-			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
-	setUniformMat4(objects[light].program, "model", glm::mat4(1.0f));
-	*/
-
 	// Setup the MVP matrix for Sun
 	setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(32.0f), 800.0f/600, 1.0f, 100.f)*
 			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
-	setUniformMat4(objects[sun].program, "model", glm::mat4(1.0f));
+	objects[sun].model = glm::mat4(1.0f);
 
 	// Setup VP matrix for Earth
-	setUniformMat4(objects[earth].program, "vp", glm::perspective(glm::radians(32.0f), 800.0f/600, 1.0f, 100.f)*
+	setUniformMat4(objects[earth].program, "vp", glm::perspective(glm::radians(24.0f), 800.0f/600, 1.0f, 100.f)*
 			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
-	setUniformMat4(objects[earth].program, "model", glm::mat4(1.0f));
+	objects[earth].model = glm::mat4(1.0f);
+
+	// setup lightPos
+	setUniformVec3(objects[earth].program, "lightPos", glm::vec3(0.0f));
+	setUniformVec3(objects[sun].program, "lightPos", glm::vec3(0.0f));
+
+	// setup viewPos
+	setUniformVec3(objects[earth].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
+	setUniformVec3(objects[sun].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
+
+	// setup ambient strength
+	setUniformVec3(objects[earth].program, "ambientLight", glm::vec3(0.5f));
+	setUniformVec3(objects[sun].program, "ambientLight", glm::vec3(1.0f));
 
 	float last, start;
 	last = start = glfwGetTime();
@@ -391,11 +407,11 @@ int main(int argc, char *argv[])
 		angle = angle + 0.1f;
 		sunAngle = sunAngle + 0.003f;
 		rev = rev + 0.01f;
-		glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(10.0*sin(rev),3*sin(rev),20.0*cos(rev)));
+		glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(8.0*sin(rev),3.0*sin(rev),16.0*cos(rev)));
 		glm::mat4 rotateM = glm::rotate(glm::mat4(), angle, glm::vec3(0.1f, 1.0f, 0.0f));
 		glm::mat4 sunRotate = glm::rotate(glm::mat4(), sunAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-		setUniformMat4(objects[earth].program, "model", tl * rotateM);
-		setUniformMat4(objects[sun].program, "model", sunRotate);
+		objects[earth].model = tl * rotateM;
+		objects[sun].model = sunRotate;
 
 		fps++;
 		if(glfwGetTime() - last > 1.0)
