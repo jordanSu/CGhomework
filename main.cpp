@@ -328,21 +328,25 @@ static void changeProgram()
 		case 1:	// change to Gouraud
 			objects[sun].program = GouraudProgram;
 			objects[earth].program = GouraudProgram;
+			std::cout << "Gouraud Shading!!!" << std::endl;
 			ProgramIndex = 2;
 			break;
 		case 2:	// change to Phong
 			objects[sun].program = PhongProgram;
 			objects[earth].program = PhongProgram;
+			std::cout << "Phong Shading!!!" << std::endl;
 			ProgramIndex = 3;
 			break;
 		case 3:	// change to Blinn
 			objects[sun].program = BlinnProgram;
 			objects[earth].program = BlinnProgram;
+			std::cout << "Blinn-Phong Shading!!!" << std::endl;
 			ProgramIndex = 4;
 			break;
 		case 4:	// change to Flat
 			objects[sun].program = FlatProgram;
 			objects[earth].program = FlatProgram;
+			std::cout << "Flat Shading!!!" << std::endl;
 			ProgramIndex = 1;
 			break;
 	}
