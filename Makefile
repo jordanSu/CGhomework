@@ -2,11 +2,11 @@ EXEC = HW3
 .PHONY: all
 all: $(EXEC)
 
-CXXFLAGS = -I. -std=c++0x -DGLEW_STATIC
+CXXFLAGS = -I. -std=c++0x -DGLEW_STATIC -I/usr/local/include/freetype2
 CFLAGS = -I. -DGLEW_STATIC
 # If you can't compile, use this line instead
 #LFLAGS = -lGL -lglfw3 -lX11 -lXxf86vm -lXinerama -lXrandr -lpthread -lXi -lXcursor -ldl
-LFLAGS = `pkg-config glfw3 --libs --static` -framework OpenGL
+LFLAGS = `pkg-config glfw3 --libs --static` -framework OpenGL -lfreetype
 
 OBJS := \
 	main.o \
