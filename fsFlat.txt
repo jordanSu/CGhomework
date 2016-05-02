@@ -4,8 +4,8 @@
 // If you create framebuffer your own, you need to take care of it
 layout(location=0) out vec4 outputColor;
 
-flat in vec2 fTexcoord;	// Texture coordinate
-flat in vec3 fNormal;
+flat in vec2 fTexcoord;		// Texture coordinate
+flat in vec3 fNormal;		// Fragment Normal
 flat in vec3 fragmentPos;
 
 uniform sampler2D uSampler;

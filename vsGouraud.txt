@@ -17,7 +17,7 @@ uniform sampler2D uSampler;
 
 // Outputs
 // 'out' means vertex shader output for fragment shader
-// fNormal will be interpolated before passing to fragment shader
+// So we calculate every vertex's color as output
 out vec4 resultColor;
 
 void main()
@@ -47,6 +47,7 @@ void main()
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
 	vec3 specular = strength * spec * vec3(1.0);
 	/********************/
+	
 	vec4 color = texture(uSampler, texcoord);
 	resultColor = vec4(ambient + diffuse + specular,1.0f) * color;
 }

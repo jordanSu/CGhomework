@@ -8,6 +8,6 @@ in vec4 resultColor;
 
 void main()
 {
-	// apply light to color
+	// just output the fragment color which has been interpolated
 	outputColor = resultColor;
 }

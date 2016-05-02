@@ -24,8 +24,8 @@ struct object_struct{
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
 unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram;		// Four shader program
-int sun, earth;
-int ProgramIndex = 3;
+int sun, earth;		// index in objects
+int ProgramIndex = 3;	// set program start from PhongProgram
 std::vector<int> indicesCount;		// Number of indice of objs
 
 static void error_callback(int error, const char* description)
@@ -273,6 +273,7 @@ static void releaseObjects()
 		glDeleteTextures(1, &objects[i].texture);
 		glDeleteBuffers(4, objects[i].vbo);
 	}
+	// Delete all the program
 	glDeleteProgram(FlatProgram);
 	glDeleteProgram(GouraudProgram);
 	glDeleteProgram(PhongProgram);
@@ -294,6 +295,7 @@ static void setUniformMat4(unsigned int program, const std::string &name, const 
 	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
 }
 
+// A function which is similar to setUniformMat4, but this time it is for vec3
 static void setUniformVec3(unsigned int program, const std::string &name, const glm::vec3 &vector)
 {
 	// This line can be ignore. But, if you have multiple shader program
@@ -314,7 +316,7 @@ static void render()
 		glUseProgram(objects[i].program);
 		glBindVertexArray(objects[i].vao);
 		glBindTexture(GL_TEXTURE_2D, objects[i].texture);
-		// I will change the model matrix and ambient strength here
+		// I change the model matrix and ambient strength here
 		setUniformMat4(objects[i].program, "model", objects[i].model);
 		setUniformVec3(objects[i].program, "ambientLight", objects[i].ambient);
 		glDrawElements(GL_TRIANGLES, indicesCount[i], GL_UNSIGNED_INT, nullptr);
@@ -322,6 +324,7 @@ static void render()
 	glBindVertexArray(0);
 }
 
+// This function can change the shading program one after another
 static void changeProgram()
 {
 	switch(ProgramIndex) {
@@ -386,7 +389,7 @@ int main(int argc, char *argv[])
 	// Setup input callback
 	glfwSetKeyCallback(window, key_callback);
 
-	// setup and load shader program
+	// setup all shader program
 	FlatProgram = setup_shader(readfile("vsFlat.txt").c_str(), readfile("fsFlat.txt").c_str());
 	GouraudProgram = setup_shader(readfile("vsGouraud.txt").c_str(), readfile("fsGouraud.txt").c_str());
 	PhongProgram = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
@@ -409,7 +412,7 @@ int main(int argc, char *argv[])
 			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
 	objects[sun].model = glm::mat4(1.0f);
 
-	// Setup VP matrix for Earth
+	// Setup the MVP matrix for Earth
 	setUniformMat4(objects[earth].program, "vp", glm::perspective(glm::radians(24.0f), 800.0f/600, 1.0f, 100.f)*
 			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
 	objects[earth].model = glm::mat4(1.0f);
@@ -456,7 +459,9 @@ int main(int argc, char *argv[])
 		if(glfwGetTime() - last > 1.0)
 		{
 			if (changeCount == 0) {
-				changeProgram();
+				changeProgram();	// time to change program!
+
+				// Since we change the program, we have to set uniform again
 				// Setup the MVP matrix for Sun
 				setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
 						glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
