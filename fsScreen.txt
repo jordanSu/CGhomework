@@ -1,0 +1,15 @@
+#version 330
+
+// Default color buffer location is 0
+// If you create framebuffer your own, you need to take care of it
+layout(location=0) out vec4 outputColor;
+
+in vec2 fTexcoord;	// Texture coordinate
+
+uniform sampler2D uSampler;
+
+void main()
+{
+	outputColor = texture(uSampler, fTexcoord);
+    //outputColor = vec4(vec3(1.0 - texture(uSampler, fTexcoord)), 1.0);
+}

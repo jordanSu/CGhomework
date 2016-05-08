@@ -22,11 +22,26 @@ struct object_struct{
 	object_struct(): model(glm::mat4(1.0f)){}
 };
 
+GLfloat screenVertices[] = {   // Vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+        // Positions   // TexCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+};
+GLuint frameBuffer;
+GLuint texColorBuffer;
+GLuint screenVAO, screenVBO;
+
+
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
-unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram;		// Four shader program
+unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram, ScreenProgram;	// Five shader program
 int sun, earth;		// index in objects
 int ProgramIndex = 3;	// set program start from PhongProgram
-std::vector<int> indicesCount;		// Number of indice of objs
+std::vector<int> indicesCount;		// Number of indices of objs
 
 static void error_callback(int error, const char* description)
 {
@@ -265,6 +280,42 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 	return objects.size()-1;
 }
 
+static void frameBuffer_init()
+{
+	glGenVertexArrays(1, &screenVAO);
+	glGenBuffers(1, &screenVBO);
+	glBindVertexArray(screenVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(screenVertices), &screenVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4*sizeof(GLfloat), (GLvoid*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4*sizeof(GLfloat), (GLvoid*)(2*sizeof(GLfloat)));
+	glBindVertexArray(0);
+
+	glGenFramebuffers(1, &frameBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+
+	glGenTextures(1, &texColorBuffer);
+	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
+
+	GLuint rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 800, 600);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "FrameBuffer is not complete!!!" << std::endl;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 // Free all objects and memory space
 static void releaseObjects()
 {
@@ -310,18 +361,39 @@ static void setUniformVec3(unsigned int program, const std::string &name, const 
 // Draw Object on window
 static void render()
 {
+	/********* 1. Switch to framebuffer first and draw *********/
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	// draw every object
-	for(int i=0;i<objects.size();i++){
+	glEnable(GL_DEPTH_TEST);
+	for(int i=0;i<objects.size();i++){		// draw every object
 		glUseProgram(objects[i].program);
 		glBindVertexArray(objects[i].vao);
 		glBindTexture(GL_TEXTURE_2D, objects[i].texture);
-		// I change the model matrix and ambient strength here
+
+        // I change the model matrix and ambient strength here
 		setUniformMat4(objects[i].program, "model", objects[i].model);
 		setUniformVec3(objects[i].program, "ambientLight", objects[i].ambient);
 		glDrawElements(GL_TRIANGLES, indicesCount[i], GL_UNSIGNED_INT, nullptr);
 	}
 	glBindVertexArray(0);
+	/**********************************************************/
+
+	/********* 2. Switch back to default and clear buffer *********/
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	/**************************************************************/
+
+	/********* 3. Use screen shader to do post processing *********/
+	glUseProgram(ScreenProgram);
+	glBindVertexArray(screenVAO);
+	glDisable(GL_DEPTH_TEST);
+	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(0);
+	/**************************************************************/
+
 }
 
 // This function can change the shading program one after another
@@ -353,6 +425,22 @@ static void changeProgram()
 			ProgramIndex = 1;
 			break;
 	}
+	// Since we change the program, we have to set uniform again
+	// Setup the MVP matrix for Sun
+	setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
+			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
+
+	// Setup VP matrix for Earth
+	setUniformMat4(objects[earth].program, "vp", glm::perspective(glm::radians(24.0f), 800.0f/600, 1.0f, 100.f)*
+			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
+
+	// setup lightPos
+	setUniformVec3(objects[earth].program, "lightPos", glm::vec3(0.0f));
+	setUniformVec3(objects[sun].program, "lightPos", glm::vec3(0.0f));
+
+	// setup viewPos
+	setUniformVec3(objects[earth].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
+	setUniformVec3(objects[sun].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
 }
 
 int main(int argc, char *argv[])
@@ -394,18 +482,20 @@ int main(int argc, char *argv[])
 	GouraudProgram = setup_shader(readfile("vsGouraud.txt").c_str(), readfile("fsGouraud.txt").c_str());
 	PhongProgram = setup_shader(readfile("vs.txt").c_str(), readfile("fs.txt").c_str());
 	BlinnProgram = setup_shader(readfile("vsBlinn.txt").c_str(), readfile("fsBlinn.txt").c_str());
+	ScreenProgram = setup_shader(readfile("vsScreen.txt").c_str(), readfile("fsScreen.txt").c_str());
 
 	// Build obj and return the index in objects array
 	sun = add_obj(PhongProgram, "sun.obj","sun.bmp");
 	earth = add_obj(PhongProgram, "earth.obj","earth.bmp");
 
-	glEnable(GL_DEPTH_TEST);
-	glCullFace(GL_BACK);
+	//glCullFace(GL_BACK);
 	// Enable blend mode for billboard
 	glEnable(GL_BLEND);
 	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 	glProvokingVertex(GL_FIRST_VERTEX_CONVENTION);
+
+	// Initialize framebuffers
+	frameBuffer_init();
 
 	// Setup the MVP matrix for Sun
 	setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
@@ -432,12 +522,11 @@ int main(int argc, char *argv[])
 	float last, start;
 	last = start = glfwGetTime();
 	int fps=0;
-	//objects[sun].model = glm::scale(glm::mat4(1.0f), glm::vec3(0.85f));
 
 	float angle = 5.0f;
 	float rev = 5.0f;
 	float sunAngle = 5.0f;
-	int changeCount = 3;
+	int changeCount = 3;	// the interval to change a shader(in sec)
 	while (!glfwWindowShouldClose(window))
 	{ //program will keep drawing here until you close the window
 		float delta = glfwGetTime() - start;
@@ -458,30 +547,14 @@ int main(int argc, char *argv[])
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
+            /*
 			if (changeCount == 0) {
 				changeProgram();	// time to change program!
-
-				// Since we change the program, we have to set uniform again
-				// Setup the MVP matrix for Sun
-				setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
-						glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
-
-				// Setup VP matrix for Earth
-				setUniformMat4(objects[earth].program, "vp", glm::perspective(glm::radians(24.0f), 800.0f/600, 1.0f, 100.f)*
-						glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
-
-				// setup lightPos
-				setUniformVec3(objects[earth].program, "lightPos", glm::vec3(0.0f));
-				setUniformVec3(objects[sun].program, "lightPos", glm::vec3(0.0f));
-
-				// setup viewPos
-				setUniformVec3(objects[earth].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
-				setUniformVec3(objects[sun].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
 				changeCount = 3;
 			}
 			else
 				changeCount--;
-
+            */
 			std::cout<<(double)fps/(glfwGetTime()-last)<<std::endl;
 			fps = 0;
 			last = glfwGetTime();

@@ -41,4 +41,5 @@ void main()
 	/********************/
 
 	outputColor = vec4(ambient + diffuse + specular, 1.0f) * color;
+	//outputColor = vec4(vec3(gl_FragCoord.z), 1.0f);
 }
