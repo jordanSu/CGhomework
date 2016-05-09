@@ -41,14 +41,16 @@ GLfloat screenVertices[] = {   // Vertex attributes for a quad that fills the en
 GLuint frameBuffer;
 GLuint texColorBuffer;
 GLuint screenVAO, screenVBO;
-GLfloat Zoom = 2.0;
-
+GLfloat Zoom = 1.5;
+double xpos,ypos;	// Mouse Pos
+double circleArea = 5000.0;
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
 unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram, ScreenProgram;	// Five shader program
 int sun, earth;		// index in objects
 int ProgramIndex = 3;	// set program start from PhongProgram
 std::vector<int> indicesCount;		// Number of indices of objs
+
 
 static void error_callback(int error, const char* description)
 {
@@ -58,7 +60,19 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);		//close the window when Esc is pressed
+	else if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS))
+		Zoom = (Zoom+0.1<=2.0) ? Zoom+0.1 : Zoom;
+	else if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS))
+		Zoom = (Zoom-0.1>=0.9) ? Zoom-0.1 : Zoom;
+	std::cout << Zoom << std::endl;
 }
+
+static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	if (circleArea+1000*yoffset >= 100 && circleArea+1000*yoffset <= 50000)
+		circleArea = circleArea + 1000*yoffset;
+}
+
 
 // Setup shader program here
 static unsigned int setup_shader(const char *vertex_shader, const char *fragment_shader)
@@ -423,8 +437,8 @@ static void render()
 	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
 	setUniformFloat(ScreenProgram, "Zoom", Zoom);
 	setUniformFloat(ScreenProgram, "pixelMulti", PIXELMULTI);
-	setUniformFloat(ScreenProgram, "circleArea", 10000.0);
-	setUniformVec2(ScreenProgram, "mouseLoc", glm::vec2(400,300));
+	setUniformFloat(ScreenProgram, "circleArea", circleArea);
+	setUniformVec2(ScreenProgram, "mouseLoc", glm::vec2(xpos,abs(600-ypos)));
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	/**************************************************************/
@@ -511,6 +525,7 @@ int main(int argc, char *argv[])
 
 	// Setup input callback
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetScrollCallback(window, scroll_callback);
 
 	// setup all shader program
 	FlatProgram = setup_shader(readfile("vsFlat.txt").c_str(), readfile("fsFlat.txt").c_str());
@@ -565,6 +580,7 @@ int main(int argc, char *argv[])
 	while (!glfwWindowShouldClose(window))
 	{ //program will keep drawing here until you close the window
 		float delta = glfwGetTime() - start;
+		glfwGetCursorPos(window, &xpos, &ypos);
 		render();
 		glfwSwapBuffers(window);	// To swap the color buffer in this game loop
 		glfwPollEvents();			// To check if any events are triggered

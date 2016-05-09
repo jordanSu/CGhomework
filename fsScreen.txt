@@ -16,9 +16,9 @@ uniform sampler2D uSampler;
 void main()
 {
     vec2 finalTexcoord;
-
+    vec2 normalLoc = vec2(mouseLoc.x/800.0, mouseLoc.y/600.0);
 	if (pow(gl_FragCoord.x-(mouseLoc.x*pixelMulti),2) + pow(gl_FragCoord.y-(mouseLoc.y*pixelMulti),2) <= circleArea)
-        finalTexcoord = (fTexcoord - 0.5)*(1.0/Zoom)+0.5;
+        finalTexcoord = (fTexcoord-normalLoc) * (1.0/Zoom) + normalLoc;
     else
         finalTexcoord = fTexcoord;
     outputColor = texture(uSampler, finalTexcoord);
