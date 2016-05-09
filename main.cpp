@@ -12,6 +12,12 @@
 
 #define GLM_FORCE_RADIANS
 
+#ifdef __APPLE__
+	#define PIXELMULTI 2.0
+#else
+	#define PIXELMULTI 1.0
+#endif
+
 struct object_struct{
 	unsigned int program;
 	unsigned int vao;
@@ -28,13 +34,14 @@ GLfloat screenVertices[] = {   // Vertex attributes for a quad that fills the en
         -1.0f, -1.0f,  0.0f, 0.0f,	//left-bottom
          1.0f, -1.0f,  1.0f, 0.0f,	//right-bottom
 
-        -1.0f,  1.0f,  0.0f, 1.0f,	//
-         1.0f, -1.0f,  1.0f, 0.0f,
-         1.0f,  1.0f,  1.0f, 1.0f
+        -1.0f,  1.0f,  0.0f, 1.0f,	//left-top
+         1.0f, -1.0f,  1.0f, 0.0f,	//right-bottom
+         1.0f,  1.0f,  1.0f, 1.0f	//right-top
 };
 GLuint frameBuffer;
 GLuint texColorBuffer;
 GLuint screenVAO, screenVBO;
+GLfloat Zoom = 2.0;
 
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
@@ -298,7 +305,7 @@ static void frameBuffer_init()
 
 	glGenTextures(1, &texColorBuffer);
 	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800*PIXELMULTI, 600*PIXELMULTI, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -307,7 +314,7 @@ static void frameBuffer_init()
 	GLuint rbo;
 	glGenRenderbuffers(1, &rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 800, 600);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 800*PIXELMULTI, 600*PIXELMULTI);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
 
@@ -358,10 +365,34 @@ static void setUniformVec3(unsigned int program, const std::string &name, const 
 	glUniform3f(loc, vector.x, vector.y, vector.z);
 }
 
+static void setUniformVec2(unsigned int program, const std::string &name, const glm::vec2 &vector)
+{
+	// This line can be ignore. But, if you have multiple shader program
+	// You must check if currect binding is the one you want
+	glUseProgram(program);
+	GLint loc=glGetUniformLocation(program, name.c_str());
+	if(loc==-1) return;
+
+	glUniform2f(loc, vector.x, vector.y);
+}
+
+// A function which is similar to setUniformMat4, but this time it is for vec3
+static void setUniformFloat(unsigned int program, const std::string &name, const GLfloat &value)
+{
+	// This line can be ignore. But, if you have multiple shader program
+	// You must check if currect binding is the one you want
+	glUseProgram(program);
+	GLint loc=glGetUniformLocation(program, name.c_str());
+	if(loc==-1) return;
+
+	glUniform1f(loc, value);
+}
+
 // Draw Object on window
 static void render()
 {
 	/********* 1. Switch to framebuffer first and draw *********/
+	glViewport(0.0, 0.0, 800*PIXELMULTI, 600*PIXELMULTI);
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -390,6 +421,10 @@ static void render()
 	glBindVertexArray(screenVAO);
 	glDisable(GL_DEPTH_TEST);
 	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+	setUniformFloat(ScreenProgram, "Zoom", Zoom);
+	setUniformFloat(ScreenProgram, "pixelMulti", PIXELMULTI);
+	setUniformFloat(ScreenProgram, "circleArea", 10000.0);
+	setUniformVec2(ScreenProgram, "mouseLoc", glm::vec2(400,300));
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	/**************************************************************/

@@ -7,15 +7,18 @@ layout(location=0) out vec4 outputColor;
 in vec2 fTexcoord;	// Texture coordinate
 
 //Uniforms
-uniform vec2 Zoom;
+uniform float pixelMulti;
+uniform float Zoom;
+uniform float circleArea;
 uniform vec2 mouseLoc;
 uniform sampler2D uSampler;
 
 void main()
 {
     vec2 finalTexcoord;
-	if ((gl_FragCoord.x-400)*(gl_FragCoord.x-400)+(gl_FragCoord.y-300)*(gl_FragCoord.y-300) <= 2000)
-        finalTexcoord = (fTexcoord - 0.5)*0.5+0.5;
+
+	if (pow(gl_FragCoord.x-(mouseLoc.x*pixelMulti),2) + pow(gl_FragCoord.y-(mouseLoc.y*pixelMulti),2) <= circleArea)
+        finalTexcoord = (fTexcoord - 0.5)*(1.0/Zoom)+0.5;
     else
         finalTexcoord = fTexcoord;
     outputColor = texture(uSampler, finalTexcoord);
