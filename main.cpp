@@ -24,11 +24,11 @@ struct object_struct{
 
 GLfloat screenVertices[] = {   // Vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
         // Positions   // TexCoords
-        -1.0f,  1.0f,  0.0f, 1.0f,
-        -1.0f, -1.0f,  0.0f, 0.0f,
-         1.0f, -1.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f,  0.0f, 1.0f,	//left-top
+        -1.0f, -1.0f,  0.0f, 0.0f,	//left-bottom
+         1.0f, -1.0f,  1.0f, 0.0f,	//right-bottom
 
-        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f,  1.0f,  0.0f, 1.0f,	//
          1.0f, -1.0f,  1.0f, 0.0f,
          1.0f,  1.0f,  1.0f, 1.0f
 };
