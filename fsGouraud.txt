@@ -4,10 +4,13 @@
 // If you create framebuffer your own, you need to take care of it
 layout(location=0) out vec4 outputColor;
 
-in vec4 resultColor;
+in vec2 fTexcoord;
+in vec3 outputLight;
+
+uniform sampler2D uSampler;
 
 void main()
 {
-	// just output the fragment color which has been interpolated
-	outputColor = resultColor;
+	vec4 color = texture(uSampler, fTexcoord);
+	outputColor = vec4(outputLight,1.0f) * color;
 }

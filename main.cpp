@@ -51,7 +51,7 @@ double stdDev = 0.84089642;
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
 unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram, ScreenProgram;	// Five shader program
 int sun, earth;		// index in objects
-int ProgramIndex = 3;	// set program start from PhongProgram
+int ProgramIndex = 2;	// set program start from PhongProgram
 std::vector<int> indicesCount;		// Number of indices of objs
 
 
@@ -589,27 +589,13 @@ int main(int argc, char *argv[])
 	// Initialize framebuffers
 	frameBuffer_init();
 
-	// Setup the MVP matrix for Sun
-	setUniformMat4(objects[sun].program, "vp", glm::perspective(glm::radians(35.0f), 800.0f/600, 1.0f, 100.f)*
-			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
-	objects[sun].model = glm::mat4(1.0f);
+	// change program in order to give uniforms value
+	changeProgram();
 
-	// Setup the MVP matrix for Earth
-	setUniformMat4(objects[earth].program, "vp", glm::perspective(glm::radians(24.0f), 800.0f/600, 1.0f, 100.f)*
-			glm::lookAt(glm::vec3(40.0f, 15.0f, 40.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f))*glm::mat4(1.0f));
-	objects[earth].model = glm::mat4(1.0f);
-
-	// setup lightPos
-	setUniformVec3(objects[earth].program, "lightPos", glm::vec3(0.0f));
-	setUniformVec3(objects[sun].program, "lightPos", glm::vec3(0.0f));
-
-	// setup viewPos
-	setUniformVec3(objects[earth].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
-	setUniformVec3(objects[sun].program, "viewPos", glm::vec3(40.0f, 15.0f, 40.0f));
 
 	// setup ambient strength
-	objects[earth].ambient = glm::vec3(0.5f);
-	objects[sun].ambient = glm::vec3(1.0f);
+	objects[earth].ambient = glm::vec3(0.4f);
+	objects[sun].ambient = glm::vec3(0.9f);
 
 	float last, start;
 	last = start = glfwGetTime();
@@ -640,14 +626,14 @@ int main(int argc, char *argv[])
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
-            /*
+
 			if (changeCount == 0) {
 				changeProgram();	// time to change program!
 				changeCount = 3;
 			}
 			else
 				changeCount--;
-            */
+
 			std::cout<<(double)fps/(glfwGetTime()-last)<<std::endl;
 			fps = 0;
 			last = glfwGetTime();

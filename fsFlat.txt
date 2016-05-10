@@ -4,41 +4,15 @@
 // If you create framebuffer your own, you need to take care of it
 layout(location=0) out vec4 outputColor;
 
-flat in vec2 fTexcoord;		// Texture coordinate
-flat in vec3 fNormal;		// Fragment Normal
-flat in vec3 fragmentPos;
+in vec2 fTexcoord;		// Texture coordinate
+flat in vec3 outputLight;
 
 uniform sampler2D uSampler;
-uniform vec3 lightPos;
-uniform vec3 viewPos;
-uniform vec3 ambientLight;
+
 
 void main()
 {
 	// To read the color from the texture
 	vec4 color = texture(uSampler, fTexcoord);
-
-	/***** Ambient *****/
-	vec3 ambient = ambientLight;
-	/*******************/
-
-	/***** Diffuse *****/
-	// To normalize relevant vectors
-	vec3 norm = normalize(fNormal);
-	vec3 lightDir = normalize(lightPos - fragmentPos);
-
-	// To calculate diffuse
-	float diff = max(dot(norm, lightDir), 0.0);
-	vec3 diffuse = diff * vec3(1.0);
-	/*******************/
-
-	/***** Specular *****/
-	float strength = 0.8f;
-	vec3 viewDir = normalize(viewPos - fragmentPos);
-	vec3 reflectDir = reflect(-lightDir, norm);
-	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
-	vec3 specular = strength * spec * vec3(1.0);
-	/********************/
-
-	outputColor = vec4(ambient + diffuse + specular, 1.0f) * color;
+	outputColor = vec4(outputLight, 1.0f) * color;
 }

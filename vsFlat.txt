@@ -10,13 +10,15 @@ layout(location=2) in vec3 normal;	// Here is the normal vector
 // HINT: I do not use model matrix here, but you might need it
 uniform mat4 model;
 uniform mat4 vp;
+uniform vec3 lightPos;
+uniform vec3 viewPos;
+uniform vec3 ambientLight;
 
 // Outputs
 // 'out' means vertex shader output for fragment shader
 // with 'flat' here will make these output not to be interpolated
-flat out vec2 fTexcoord;
-flat out vec3 fNormal;
-flat out vec3 fragmentPos;
+out vec2 fTexcoord;
+flat out vec3 outputLight;
 
 void main()
 {
@@ -25,8 +27,32 @@ void main()
 	gl_Position=vp*model*vec4(position, 1.0);
 
 	// Transform normal vector to world coordinate system.
-	fNormal = mat3(transpose(inverse(model))) * normal;
+	vec3 fNormal = mat3(transpose(inverse(model))) * normal;
 
 	// Transform vector position to world coordinate system.
-	fragmentPos = vec3(model*vec4(position, 1.0));
+	vec3 worldPos = vec3(model*vec4(position, 1.0));
+
+	/***** Ambient *****/
+	vec3 ambient = ambientLight;
+	/*******************/
+
+	/***** Diffuse *****/
+	// To normalize relevant vectors
+	vec3 norm = normalize(fNormal);
+	vec3 lightDir = normalize(lightPos - worldPos);
+
+	// To calculate diffuse
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 diffuse = diff * vec3(1.0);
+	/*******************/
+
+	/***** Specular *****/
+	float strength = 0.8f;
+	vec3 viewDir = normalize(viewPos - worldPos);
+	vec3 reflectDir = reflect(-lightDir, norm);
+	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
+	vec3 specular = strength * spec * vec3(1.0);
+	/********************/
+
+	outputLight = ambient + diffuse + specular;
 }

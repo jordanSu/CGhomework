@@ -13,16 +13,17 @@ uniform mat4 vp;
 uniform vec3 lightPos;
 uniform vec3 viewPos;
 uniform vec3 ambientLight;
-uniform sampler2D uSampler;
 
 // Outputs
 // 'out' means vertex shader output for fragment shader
 // So we calculate every vertex's color as output
-out vec4 resultColor;
+out vec2 fTexcoord;
+out vec3 outputLight;
 
 void main()
 {
 	gl_Position=vp*model*vec4(position, 1.0);
+	fTexcoord = texcoord;
 
 	vec3 vertexPos = vec3(model*vec4(position, 1.0));
 
@@ -47,7 +48,6 @@ void main()
 	float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
 	vec3 specular = strength * spec * vec3(1.0);
 	/********************/
-	
-	vec4 color = texture(uSampler, texcoord);
-	resultColor = vec4(ambient + diffuse + specular,1.0f) * color;
+
+	outputLight = ambient + diffuse + specular;
 }
