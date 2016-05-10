@@ -46,7 +46,7 @@ GLuint screenVAO, screenVBO;
 GLfloat Zoom = 1.5;
 double xpos,ypos;	// Mouse Pos
 double circleArea = 5000.0;
-double stdDev = 0.84089642;
+double stdDev = 0.84089642;		// stdDev for Gaussian Blur
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
 unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram, ScreenProgram;	// Five shader program
@@ -59,27 +59,33 @@ static void error_callback(int error, const char* description)
 {
 	fputs(description, stderr);
 }
+
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	// Press Esc to exit this program
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);		//close the window when Esc is pressed
+		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	// Use ↑ ↓ to adjust zoom depth
 	else if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS))
 		Zoom = (Zoom+0.1<=2.1) ? Zoom+0.1 : Zoom;
 	else if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS))
 		Zoom = (Zoom-0.1>=0.9) ? Zoom-0.1 : Zoom;
+
+	// Use ← → to adjust stdDev
 	else if (key == GLFW_KEY_LEFT && (action == GLFW_REPEAT || action == GLFW_PRESS))
 		stdDev = (stdDev-0.4>=0.0) ? stdDev-0.4 : stdDev;
 	else if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
 		stdDev = (stdDev+0.4<=16.0) ? stdDev+0.4 : stdDev;
-	std::cout << "Now stdDev is " << stdDev << std::endl;
+	//std::cout << "Now stdDev is " << stdDev << std::endl;
 }
 
 static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
+	// Use mouse scrolling to adjust circle area
 	if (circleArea+1000*yoffset >= 100 && circleArea+1000*yoffset <= 50000)
 		circleArea = circleArea + 1000*yoffset;
 }
-
 
 // Setup shader program here
 static unsigned int setup_shader(const char *vertex_shader, const char *fragment_shader)
@@ -308,6 +314,7 @@ static int add_obj(unsigned int program, const char *filename,const char *texbmp
 	return objects.size()-1;
 }
 
+// This function will initialize all works before using framebuffer
 static void frameBuffer_init()
 {
 	glGenVertexArrays(1, &screenVAO);
@@ -324,6 +331,7 @@ static void frameBuffer_init()
 	glGenFramebuffers(1, &frameBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 
+	// Generate texture buffer and bind it to framebuffer
 	glGenTextures(1, &texColorBuffer);
 	glBindTexture(GL_TEXTURE_2D, texColorBuffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800*PIXELMULTI, 600*PIXELMULTI, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -332,6 +340,7 @@ static void frameBuffer_init()
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texColorBuffer, 0);
 
+	// Generate render buffer and bind it to framebuffer
 	GLuint rbo;
 	glGenRenderbuffers(1, &rbo);
 	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
@@ -357,8 +366,10 @@ static void releaseObjects()
 	glDeleteProgram(GouraudProgram);
 	glDeleteProgram(PhongProgram);
 	glDeleteProgram(BlinnProgram);
+	glDeleteProgram(ScreenProgram);
 }
 
+// This function will return mat3 sample gauss matrix with given sigma
 static glm::mat3 buildGaussianMat3()
 {
 	double element[9] = {0};
@@ -372,7 +383,7 @@ static glm::mat3 buildGaussianMat3()
 			sumArg = sumArg + arg;
 		}
 	}
-
+	// Normalize
 	for (int k=0;k<9;k++)
 		element[k] = element[k] / sumArg;
 
@@ -589,9 +600,8 @@ int main(int argc, char *argv[])
 	// Initialize framebuffers
 	frameBuffer_init();
 
-	// change program in order to give uniforms value
+	// change program first in order to give uniforms value
 	changeProgram();
-
 
 	// setup ambient strength
 	objects[earth].ambient = glm::vec3(0.4f);
@@ -626,14 +636,12 @@ int main(int argc, char *argv[])
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
-
 			if (changeCount == 0) {
 				changeProgram();	// time to change program!
 				changeCount = 3;
 			}
 			else
 				changeCount--;
-
 			std::cout<<(double)fps/(glfwGetTime()-last)<<std::endl;
 			fps = 0;
 			last = glfwGetTime();
