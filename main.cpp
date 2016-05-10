@@ -11,6 +11,8 @@
 #include "tiny_obj_loader.h"
 
 #define GLM_FORCE_RADIANS
+#define PI 3.1415
+#define e 2.71828
 
 #ifdef __APPLE__
 	#define PIXELMULTI 2.0
@@ -44,6 +46,7 @@ GLuint screenVAO, screenVBO;
 GLfloat Zoom = 1.5;
 double xpos,ypos;	// Mouse Pos
 double circleArea = 5000.0;
+double stdDev = 0.84089642;
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
 unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram, ScreenProgram;	// Five shader program
@@ -61,10 +64,14 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);		//close the window when Esc is pressed
 	else if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS))
-		Zoom = (Zoom+0.1<=2.0) ? Zoom+0.1 : Zoom;
+		Zoom = (Zoom+0.1<=2.1) ? Zoom+0.1 : Zoom;
 	else if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS))
 		Zoom = (Zoom-0.1>=0.9) ? Zoom-0.1 : Zoom;
-	std::cout << Zoom << std::endl;
+	else if (key == GLFW_KEY_LEFT && (action == GLFW_REPEAT || action == GLFW_PRESS))
+		stdDev = (stdDev-0.4>=0.0) ? stdDev-0.4 : stdDev;
+	else if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
+		stdDev = (stdDev+0.4<=16.0) ? stdDev+0.4 : stdDev;
+	std::cout << "Now stdDev is " << stdDev << std::endl;
 }
 
 static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -352,6 +359,26 @@ static void releaseObjects()
 	glDeleteProgram(BlinnProgram);
 }
 
+static glm::mat3 buildGaussianMat3()
+{
+	double element[9] = {0};
+	double sumArg = 0.0;
+	for (int i=-1;i<=1;i++)
+	{
+		for (int j=-1;j<=1;j++)
+		{
+			double arg = 1/(2*PI*stdDev*stdDev)*pow(e, -(i*i+j*j)/(2*stdDev*stdDev));
+			element[3*i+j+4] = arg;
+			sumArg = sumArg + arg;
+		}
+	}
+
+	for (int k=0;k<9;k++)
+		element[k] = element[k] / sumArg;
+
+	return glm::make_mat3(element);
+}
+
 // The key function of HW2, you can change Uniform variable here
 static void setUniformMat4(unsigned int program, const std::string &name, const glm::mat4 &mat)
 {
@@ -365,6 +392,20 @@ static void setUniformMat4(unsigned int program, const std::string &name, const 
 	// we don't need to transpose it. so..GL_FALSE
 	// Put `mat` into uniform variable in vs.txt
 	glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
+}
+
+static void setUniformMat3(unsigned int program, const std::string &name, const glm::mat3 &mat)
+{
+	// This line can be ignore. But, if you have multiple shader program
+	// You must check if currect binding is the one you want
+	glUseProgram(program);
+	GLint loc=glGetUniformLocation(program, name.c_str());
+	if(loc==-1) return;
+
+	// mat4 of glm is column major, same as opengl
+	// we don't need to transpose it. so..GL_FALSE
+	// Put `mat` into uniform variable in vs.txt
+	glUniformMatrix3fv(loc, 1, GL_FALSE, glm::value_ptr(mat));
 }
 
 // A function which is similar to setUniformMat4, but this time it is for vec3
@@ -438,7 +479,8 @@ static void render()
 	setUniformFloat(ScreenProgram, "Zoom", Zoom);
 	setUniformFloat(ScreenProgram, "pixelMulti", PIXELMULTI);
 	setUniformFloat(ScreenProgram, "circleArea", circleArea);
-	setUniformVec2(ScreenProgram, "mouseLoc", glm::vec2(xpos,abs(600-ypos)));
+	setUniformMat3(ScreenProgram, "gaussMat", buildGaussianMat3());
+	setUniformVec2(ScreenProgram, "mouseLoc", glm::vec2(xpos,std::abs(600-ypos)));
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	/**************************************************************/
