@@ -14,6 +14,8 @@
 #define PI 3.1415
 #define e 2.71828
 
+// Pixel should be double in OSX
+// So we will check if this is run on OSX
 #ifdef __APPLE__
 	#define PIXELMULTI 2.0
 #else
@@ -30,7 +32,8 @@ struct object_struct{
 	object_struct(): model(glm::mat4(1.0f)){}
 };
 
-GLfloat screenVertices[] = {   // Vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+// Vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+GLfloat screenVertices[] = {
         // Positions   // TexCoords
         -1.0f,  1.0f,  0.0f, 1.0f,	//left-top
         -1.0f, -1.0f,  0.0f, 0.0f,	//left-bottom
@@ -50,8 +53,8 @@ double stdDev = 0.84089642;		// stdDev for Gaussian Blur
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
 unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram, ScreenProgram;	// Five shader program
-int sun, earth;		// index in objects
-int ProgramIndex = 2;	// set program start from PhongProgram
+int sun, earth;						// index in objects
+int ProgramIndex = 2;				// To indicate which program is used now
 std::vector<int> indicesCount;		// Number of indices of objs
 
 
@@ -604,8 +607,8 @@ int main(int argc, char *argv[])
 	changeProgram();
 
 	// setup ambient strength
-	objects[earth].ambient = glm::vec3(0.4f);
-	objects[sun].ambient = glm::vec3(0.9f);
+	objects[earth].ambient = glm::vec3(0.5f);
+	objects[sun].ambient = glm::vec3(1.0f);
 
 	float last, start;
 	last = start = glfwGetTime();

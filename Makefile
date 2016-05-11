@@ -1,4 +1,4 @@
-EXEC = HW3
+EXEC = HW4
 .PHONY: all
 all: $(EXEC)
 

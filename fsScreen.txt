@@ -7,14 +7,16 @@ layout(location=0) out vec4 outputColor;
 in vec2 fTexcoord;	// Texture coordinate
 
 //Uniforms
-uniform float pixelMulti;
-uniform float Zoom;
-uniform float circleArea;
-uniform vec2 mouseLoc;
-uniform mat3 gaussMat;
+uniform float pixelMulti;   // Pixel should be double in OSX
+uniform float Zoom;         // Zoom depth
+uniform float circleArea;   // Circle area
+uniform vec2 mouseLoc;      // x, y coordinate for mouse
+uniform mat3 gaussMat;      // gauss matrix calculate in CPU
 uniform sampler2D uSampler;
 
 const float offset = 1.0 / 600;
+
+// In order to access the sample pixel
 vec2 offsets[9] = vec2[](
     vec2(-offset, offset),  // top-left
     vec2(0.0f,    offset),  // top-center
@@ -27,21 +29,18 @@ vec2 offsets[9] = vec2[](
     vec2(offset,  -offset)  // bottom-right
 );
 
-float kernel[9] = float[](
-1.0 / 16, 2.0 / 16, 1.0 / 16,
-2.0 / 16, 4.0 / 16, 2.0 / 16,
-1.0 / 16, 2.0 / 16, 1.0 / 16
-);
-
-
-
 void main()
 {
     vec2 finalTexcoord;
     vec2 normalLoc = vec2(mouseLoc.x/800.0, mouseLoc.y/600.0);
+
+    // If the pixel is in the circle area, we do the special effect on it
 	if (pow(gl_FragCoord.x-(mouseLoc.x*pixelMulti),2) + pow(gl_FragCoord.y-(mouseLoc.y*pixelMulti),2) <= circleArea)
     {
+        // Zooming effect
         finalTexcoord = (fTexcoord-normalLoc) * (1.0/Zoom) + normalLoc;
+
+        // Gaussian Blur effect
         vec3 sampleTex[9];
         for(int i = 0; i < 9; i++)
         {
@@ -52,10 +51,11 @@ void main()
             for (int j = 0; j < 3; j++)
                 col += sampleTex[i*3+j] * gaussMat[i][j];
 
+        // Output the final color
         outputColor = vec4(col, 1.0);
-
     }
-    else {
+    else
+    {
         finalTexcoord = fTexcoord;
         outputColor = texture(uSampler, finalTexcoord);
     }
