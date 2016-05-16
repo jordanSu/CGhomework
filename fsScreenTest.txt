@@ -1,0 +1,63 @@
+#version 330
+
+// Default color buffer location is 0
+// If you create framebuffer your own, you need to take care of it
+layout(location=0) out vec4 outputColor;
+
+in vec2 fTexcoord;	// Texture coordinate
+
+//Uniforms
+uniform float pixelMulti;   // Pixel should be double in OSX
+uniform float Zoom;         // Zoom depth
+uniform float circleArea;   // Circle area
+uniform vec2 mouseLoc;      // x, y coordinate for mouse
+uniform mat3 gaussMat;      // gauss matrix calculate in CPU
+uniform sampler2D uSampler;
+
+const float offset = 1.0 / 600;
+
+// In order to access the sample pixel
+vec2 offsets[9] = vec2[](
+    vec2(-offset, offset),  // top-left
+    vec2(0.0f,    offset),  // top-center
+    vec2(offset,  offset),  // top-right
+    vec2(-offset, 0.0f),    // center-left
+    vec2(0.0f,    0.0f),    // center-center
+    vec2(offset,  0.0f),    // center-right
+    vec2(-offset, -offset), // bottom-left
+    vec2(0.0f,    -offset), // bottom-center
+    vec2(offset,  -offset)  // bottom-right
+);
+
+void main()
+{
+    vec2 finalTexcoord;
+    vec2 normalLoc = vec2(mouseLoc.x/800.0, mouseLoc.y/600.0);
+    float disSquare = pow(gl_FragCoord.x-(mouseLoc.x*pixelMulti),2) + pow(gl_FragCoord.y-(mouseLoc.y*pixelMulti),2);
+
+    // If the pixel is in the circle area, we do the special effect on it
+	if (disSquare <= circleArea)
+    {
+        // Zooming effect
+        finalTexcoord = (fTexcoord-normalLoc) * (1.0/Zoom) * (sqrt(disSquare) / sqrt(circleArea)) + normalLoc;
+
+        // Gaussian Blur effect
+        vec3 sampleTex[9];
+        for(int i = 0; i < 9; i++)
+        {
+            sampleTex[i] = vec3(texture(uSampler, finalTexcoord + offsets[i]));
+        }
+        vec3 col = vec3(0.0);
+        for(int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++)
+                col += sampleTex[i*3+j] * gaussMat[i][j];
+
+        // Output the final color
+        outputColor = vec4(col, 1.0);
+    }
+    else
+    {
+        finalTexcoord = fTexcoord;
+        outputColor = texture(uSampler, finalTexcoord);
+    }
+}

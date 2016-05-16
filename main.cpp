@@ -50,6 +50,7 @@ GLfloat Zoom = 1.5;
 double xpos,ypos;	// Mouse Pos
 double circleArea = 5000.0;
 double stdDev = 0.84089642;		// stdDev for Gaussian Blur
+bool playing = true;
 
 std::vector<object_struct> objects;	// VAO: vertex array object,vertex buffer object and texture(color) for objs
 unsigned int FlatProgram, GouraudProgram, PhongProgram, BlinnProgram, ScreenProgram;	// Five shader program
@@ -80,7 +81,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 		stdDev = (stdDev-0.4>=0.0) ? stdDev-0.4 : stdDev;
 	else if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
 		stdDev = (stdDev+0.4<=16.0) ? stdDev+0.4 : stdDev;
-	//std::cout << "Now stdDev is " << stdDev << std::endl;
+
+	else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+		playing = (playing == true) ? false : true;
 }
 
 static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -627,24 +630,28 @@ int main(int argc, char *argv[])
 		glfwPollEvents();			// To check if any events are triggered
 
 		// Do the next step for sun rotation, earth rotation and revolution
-		angle = angle + 0.1f;
-		sunAngle = sunAngle + 0.003f;
-		rev = rev + 0.01f;
-		glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(8.0*sin(rev),3.0*sin(rev),16.0*cos(rev)));
-		glm::mat4 rotateM = glm::rotate(glm::mat4(), angle, glm::vec3(0.1f, 1.0f, 0.0f));
-		glm::mat4 sunRotate = glm::rotate(glm::mat4(), sunAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-		objects[earth].model = tl * rotateM;
-		objects[sun].model = sunRotate;
+		if (playing == true) {
+			angle = angle + 0.1f;
+			sunAngle = sunAngle + 0.003f;
+			rev = rev + 0.01f;
+			glm::mat4 tl=glm::translate(glm::mat4(),glm::vec3(8.0*sin(rev),3.0*sin(rev),16.0*cos(rev)));
+			glm::mat4 rotateM = glm::rotate(glm::mat4(), angle, glm::vec3(0.1f, 1.0f, 0.0f));
+			glm::mat4 sunRotate = glm::rotate(glm::mat4(), sunAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+			objects[earth].model = tl * rotateM;
+			objects[sun].model = sunRotate;
+		}
 
 		fps++;
 		if(glfwGetTime() - last > 1.0)
 		{
-			if (changeCount == 0) {
-				changeProgram();	// time to change program!
-				changeCount = 3;
+			if (playing == true) {
+				if (changeCount == 0) {
+					changeProgram();	// time to change program!
+					changeCount = 3;
+				}
+				else
+					changeCount--;
 			}
-			else
-				changeCount--;
 			std::cout<<(double)fps/(glfwGetTime()-last)<<std::endl;
 			fps = 0;
 			last = glfwGetTime();
